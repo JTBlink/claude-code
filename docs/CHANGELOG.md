@@ -1,5 +1,224 @@
 # 更新日志
 
+## 2.1.85
+
+- 为 MCP `headersHelper` 脚本添加了 `CLAUDE_CODE_MCP_SERVER_NAME` 和 `CLAUDE_CODE_MCP_SERVER_URL` 环境变量，允许一个辅助程序服务多个服务器
+- 为钩子添加了条件 `if` 字段，使用权限规则语法（例如 `Bash(git *)`）过滤何时运行，减少进程生成开销
+- 在计划任务（`/loop`、`CronCreate`）触发时在转录中添加了时间戳标记
+- 粘贴图像时在 `[Image #N]` 占位符后添加了尾随空格
+- 深度链接查询（`claude-cli://open?q=…`）现在支持最多 5,000 个字符，对于长预填提示显示"滚动查看"警告
+- MCP OAuth 现在遵循 RFC 9728 受保护资源元数据发现来查找授权服务器
+- 被组织策略（`managed-settings.json`）阻止的插件现在无法安装或启用，并在市场视图中隐藏
+- PreToolUse 钩子现在可以通过返回 `updatedInput` 和 `permissionDecision: "allow"` 来满足 `AskUserQuestion`，启用通过自己的 UI 收集答案的无头集成
+- OpenTelemetry tool_result 事件中的 `tool_parameters` 现在需要 `OTEL_LOG_TOOL_DETAILS=1` 才会显示
+- 修复了对话增长过大导致压缩请求本身无法容纳时 `/compact` 因"context exceeded"失败
+- 修复了当插件的安装位置与设置中声明的位置不同时 `/plugin enable` 和 `/plugin disable` 失败
+- 修复了在非 git 存储库中 `--worktree` 在 `WorktreeCreate` 钩子运行之前以错误退出
+- 修复了 `deniedMcpServers` 设置未阻止 claude.ai MCP 服务器
+- 修复了 computer-use 工具中的 `switch_display` 在多显示器设置上返回"not available in this session"
+- 修复了当 `OTEL_LOGS_EXPORTER`、`OTEL_METRICS_EXPORTER` 或 `OTEL_TRACES_EXPORTER` 设置为 `none` 时崩溃
+- 修复了非原生构建中 diff 语法高亮不工作
+- 修复了当存在刷新令牌时 MCP 步骤授权失败 — 通过 `403 insufficient_scope` 请求提升范围的服务器现在正确触发重新授权流程
+- 修复了流式响应被中断时远程会话中的内存泄漏
+- 修复了通过在重试时使用新的 TCP 连接来修复边缘连接中断期间的持续 ECONNRESET 错误
+- 修复了运行某些斜杠命令后提示卡在队列中，上箭头无法检索它们
+- 修复了 Python Agent SDK：通过 `--mcp-config` 传递的 `type:'sdk'` MCP 服务器在启动期间不再被丢弃
+- 修复了通过 SSH 或在 VS Code 集成终端中运行时原始键序列出现在提示中
+- 修复了权限解决后远程控制会话状态卡在"Requires Action"
+- 修复了 shift+enter 和 meta+enter 被预先输入建议拦截而不是插入换行符
+- 修复了流式传输期间向上滚动时陈旧内容渗透
+- 修复了在 Ghostty、Kitty、WezTerm 和其他支持 Kitty 键盘协议的终端中退出后终端留在增强键盘模式 — 退出后 Ctrl+C 和 Ctrl+D 现在正常工作
+- 改进了大型存储库中 @-mention 文件自动完成的性能
+- 改进了 PowerShell 危险命令检测
+- 通过用纯 TypeScript 实现替换 WASM yoga-layout 改进了大型转录的滚动性能
+- 减少了大型会话触发压缩时的 UI 卡顿
+
+## 2.1.84
+
+- 为 Windows 添加了 PowerShell 工具作为选择加入预览。详情请访问 https://code.claude.com/docs/en/tools-reference#powershell-tool
+- 添加了 `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL_SUPPORTS` 环境变量，用于覆盖第三方（Bedrock、Vertex、Foundry）固定默认模型的 effort/thinking 能力检测，以及 `_MODEL_NAME`/`_DESCRIPTION` 来自定义 `/model` 选择器标签
+- 添加了 `CLAUDE_STREAM_IDLE_TIMEOUT_MS` 环境变量来配置流空闲看门狗阈值（默认 90s）
+- 添加了通过 `TaskCreate` 创建任务时触发的 `TaskCreated` 钩子
+- 为 `type: "http"` 添加了 `WorktreeCreate` 钩子支持 — 通过响应 JSON 中的 `hookSpecificOutput.worktreePath` 返回创建的 worktree 路径
+- 添加了 `allowedChannelPlugins` 托管设置，供团队/企业管理员定义通道插件白名单
+- 向 API 请求添加了 `x-client-request-id` 头用于调试超时
+- 添加了空闲返回提示，在 75+ 分钟后返回时引导用户使用 `/clear`，减少陈旧会话上不必要的令牌重新缓存
+- 深度链接（`claude-cli://`）现在在您首选的终端中打开，而不是检测列表中碰巧第一个的终端
+- 规则和技能 `paths:` frontmatter 现在接受 YAML glob 列表
+- MCP 工具描述和服务器指令现在上限为 2KB，以防止 OpenAPI 生成的服务器膨胀上下文
+- 本地和通过 claude.ai 连接器配置的 MCP 服务器现在去重 — 本地配置优先
+- 似乎卡在交互式提示上的后台 bash 任务现在在约 45 秒后显示通知
+- ≥1M 的令牌计数现在显示为"1.5m"而不是"1512.6k"
+- 启用 `ToolSearch` 时全局系统提示缓存现在工作，包括配置了 MCP 工具的用户
+- 修复了语音按键说话：按住语音键不再向文本输入泄漏字符，转录现在在正确位置插入
+- 修复了当页脚项目获得焦点时上/下箭头键无响应
+- 修复了 `Ctrl+U`（kill-to-line-start）在多行输入的行边界处无效，所以重复 `Ctrl+U` 现在跨行清除
+- 修复了空取消绑定默认和弦绑定（例如 `"ctrl+x ctrl+k": null`）仍然进入和弦等待模式而不是释放前缀键
+- 修复了鼠标事件在转录搜索输入中插入字面"mouse"文本
+- 修复了当外部会话使用 `--json-schema` 且子代理也指定模式时工作流子代理因 API 400 失败
+- 修复了某些终端上用户消息气泡中某些 emoji 后面缺少背景颜色
+- 修复了对于有 `Edit(.claude)` 允许规则的用户，"允许 Claude 为此会话编辑自己的设置"权限选项不持久
+- 修复了为大型编辑文件生成附件片段时挂起
+- 修复了服务器重连时 MCP 工具/资源缓存泄漏
+- 修复了部分克隆存储库（Scalar/GVFS）触发大规模 blob 下载的启动性能问题
+- 修复了原生终端光标未跟踪文本输入插入符，所以 IME 组合（CJK 输入）现在内联渲染，屏幕阅读器可以跟随输入位置
+- 修复了 macOS 上由于瞬态钥匙串读取失败导致的虚假"Not logged in"错误
+- 修复了冷启动竞争，核心工具可能在没有激活绕过的情况下延迟，导致 Edit/Write 因类型参数上的 InputValidationError 失败
+- 改进了对 Windows 驱动器根目录（`C:\`、`C:\Windows` 等）危险删除的检测
+- 通过并行运行 `setup()` 与斜杠命令和代理加载，交互式启动改进约 30ms
+- 改进了带有 MCP 服务器的 `claude "prompt"` 启动 — REPL 现在立即渲染而不是阻塞直到所有服务器连接
+- 改进了远程控制以在被阻止时显示具体原因而不是通用的"not yet enabled"消息
+- 改进了 p90 提示缓存率
+- 通过使消息窗口免疫压缩和分组更改，减少了长会话中的滚动到顶部重置
+- 减少了动画工具进度滚动到视口上方时的终端闪烁
+- 更改了 issue/PR 引用仅在写为 `owner/repo#123` 时成为可点击链接 — 裸 `#123` 不再自动链接
+- 当前认证设置不可用的斜杠命令（`/voice`、`/mobile`、`/chrome`、`/upgrade` 等）现在隐藏而不是显示
+- [VSCode] 添加了速率限制警告横幅，显示使用百分比和重置时间
+- 统计截图（/stats 中的 Ctrl+S）现在在所有构建中工作，速度快 16 倍
+
+## 2.1.83
+
+- 在 `managed-settings.json` 旁边添加了 `managed-settings.d/` 放置目录，允许独立团队部署按字母顺序合并的独立策略片段
+- 为响应式环境管理（例如 direnv）添加了 `CwdChanged` 和 `FileChanged` 钩子事件
+- 添加了 `sandbox.failIfUnavailable` 设置，当启用沙盒但无法启动时以错误退出，而不是在非沙盒状态下运行
+- 添加了 `disableDeepLinkRegistration` 设置以防止 `claude-cli://` 协议处理程序注册
+- 添加了 `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` 以从子进程环境（Bash 工具、钩子、MCP stdio 服务器）中剥离 Anthropic 和云提供商凭据
+- 添加了转录搜索 — 在转录模式（`Ctrl+O`）中按 `/` 搜索，`n`/`N` 遍历匹配项
+- 添加了 `Ctrl+X Ctrl+E` 作为打开外部编辑器的别名（readline 原生绑定；`Ctrl+G` 仍然有效）
+- 粘贴的图像现在在光标处插入 `[Image #N]` 芯片，以便您可以在提示中按位置引用它们
+- 代理现在可以在 frontmatter 中声明 `initialPrompt` 以自动提交第一轮
+- `chat:killAgents` 和 `chat:fastMode` 现在可以通过 `~/.claude/keybindings.json` 重新绑定
+- 修复了退出后鼠标跟踪转义序列泄漏到 shell 提示
+- 修复了 macOS 上退出时 Claude Code 挂起
+- 修复了空闲几秒钟后屏幕闪烁空白
+- 修复了差异很少的大文件差异时挂起 — 差异现在在 5 秒后超时并优雅回退
+- 修复了启用语音输入时启动时的 1-8 秒 UI 冻结，由急切加载原生音频模块引起
+- 修复了 Claude Code 在继续之前等待约 3s 获取 claude.ai MCP 配置的启动回归
+- 修复了 `--mcp-config` CLI 标志绕过 `allowedMcpServers`/`deniedMcpServers` 托管策略执行
+- 修复了 claude.ai MCP 连接器（Slack、Gmail 等）在单轮 `--print` 模式下不可用
+- 修复了 Claude Code 退出时 `caffeinate` 进程未正确终止，阻止 Mac 睡眠
+- 修复了 tab 接受 `!` 前缀命令建议时 bash 模式未激活
+- 修复了导航建议后陈旧的斜杠命令选择显示错误的高亮命令
+- 修复了 `/config` 菜单同时显示搜索光标和列表选择
+- 修复了上下文压缩后后台子代理变得不可见，这可能导致生成重复的代理
+- 修复了清理期间 git 或 API 调用挂起时后台代理任务卡在"running"状态
+- 修复了升级后首次启动时 `--channels` 显示"Channels are not currently available"
+- 修复了卸载的插件钩子继续触发直到下一个会话
+- 修复了流式响应期间排队命令闪烁
+- 修复了处理消息时提交斜杠命令作为文本发送给模型
+- 修复了折叠的读取/搜索组在滚动离屏后完成时滚动跳跃
+- 修复了模型开始或停止思考时滚动跳跃到顶部
+- 修复了由于钩子进度/附件消息分叉 parentUuid 链导致恢复时 SDK 会话历史丢失
+- 修复了在终端窗口外释放鼠标时复制选择未触发
+- 修复了项目溢出时高度受限列表中出现幽灵字符
+- 修复了 `Ctrl+B` 在空闲提示时干扰 readline backward-char — 它现在仅在前台任务可以后台化时触发
+- 修复了工具结果文件从未清理，忽略 `cleanupPeriodDays` 设置
+- 修复了释放语音按住说话后空格键被吞掉长达 3 秒
+- 修复了在没有音频硬件的 Linux 上使用语音模式时 ALSA 库错误破坏终端 UI（Docker、headless、WSL1）
+- 修复了 Termux/Android 上的语音模式 SoX 检测，其中生成 `which` 受内核限制
+- 修复了远程控制会话在主动运行时在 Web 会话列表中显示为空闲
+- 修复了页脚导航在配置驱动模式下选择不可见的远程控制药丸
+- 修复了远程会话中工具使用 ID 无限累积的内存泄漏
+- 通过与其他引导工作并行获取配置文件，改进了 Bedrock SDK 冷启动延迟
+- 改进了大型会话上的 `--resume` 内存使用和启动延迟
+- 改进了插件启动 — 命令、技能和代理现在从磁盘缓存加载无需重新获取
+- 改进了远程控制会话标题：AI 生成的标题现在在第一条消息后几秒内出现
+- 改进了 `WebFetch` 以标识为 `Claude-User`，以便站点操作员可以通过 `robots.txt` 识别和允许列表 Claude Code 流量
+- 减少了大型页面的 `WebFetch` 峰值内存使用
+- 将长会话中的滚动重置从每轮一次减少到每约 50 条消息一次
+- 使用未经身份验证的 HTTP/SSE MCP 服务器更快的 `claude -p` 启动（节省约 600ms）
+- Bash 幽灵文本建议现在立即包含刚提交的命令
+- 增加了非流式回退令牌上限（21k → 64k）和超时（120s → 300s 本地），所以回退请求不太可能被截断
+- 在任何响应之前中断提示现在自动恢复您的输入，以便您可以编辑和重新提交
+- `/status` 现在在 Claude 响应时工作，而不是排队直到轮次完成
+- 复制组织管理连接器的插件 MCP 服务器现在被抑制而不是运行第二个连接
+- Linux：注册 `claude-cli://` 协议处理程序时尊重 `XDG_DATA_HOME`
+- 将"停止所有后台代理"键绑定从 `Ctrl+F` 更改为 `Ctrl+X Ctrl+K` 以停止遮蔽 readline forward-char
+- 弃用了 `TaskOutput` 工具，改用 `Read` 读取后台任务的输出文件路径
+- 添加了 `CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK` 环境变量以在流式传输失败时禁用非流式回退
+- 插件选项（`manifest.userConfig`）现在可外部使用 — 插件可以在启用时提示配置，`sensitive: true` 值存储在钥匙串（macOS）或受保护的凭据文件（其他平台）
+- Claude 现在可以引用剪贴板粘贴图像的磁盘路径进行文件操作
+- `Ctrl+L` 现在清除屏幕并强制完全重绘 — 当 Cmd+K 使 UI 部分空白时使用此功能恢复。使用 `Ctrl+U` 或双击 Esc 清除提示输入。
+- `--bare -p`（SDK 模式）到 API 请求速度提高约 14%
+- 内存：`MEMORY.md` 索引现在在 25KB 和 200 行处截断
+- 当 `--channels` 激活时禁用 `AskUserQuestion` 和计划模式工具
+- 修复了在失败的工具调用期间排队粘贴图像时的 API 400 错误
+- 修复了 SSE 连接在调用中途断开并耗尽重连尝试时 MCP 工具调用无限期挂起
+- 修复了后台代理在第一条用户消息之前完成时远程控制会话标题显示原始 XML
+- 修复了由于恢复的转录链中进度消息间隙导致容器重启后远程会话忘记对话历史
+- 修复了远程会话在瞬态认证错误时需要重新登录而不是自动重试
+- 修复了 Linux 上沙盒模式下 `rg ... | wc -l` 和类似管道命令挂起并返回 `0`
+- 修复了 CJK IME 插入全角空格时语音输入按住说话未激活
+- 修复了 worktree 名称包含正斜杠时 `--worktree` 静默挂起
+- [VSCode] 后端 60 秒未响应时旋转器现在变红并显示"Not responding"
+- [VSCode] 修复了通过 URL 或重启后重新打开会话时会话历史未正确加载
+- [VSCode] 添加了双击 Esc（或 `/rewind`）打开键盘可导航的回退选择器
+- [VSCode] 修复了会话缓存过期后"从这里分叉对话"和回退操作静默失败
+
+## 2.1.82
+
+- 添加了 `CLAUDE_CODE_OAUTH_CLAIMS` 环境变量，用于在 OAuth 登录期间注入自定义 JWT 声明（例如团队 ID、组织 ID）
+- 添加了 `CLAUDE_CODE_OAUTH_REDIRECT_PORT` 环境变量来覆盖 OAuth 回调端口（默认 8787）
+- 为 `--mcp-config` 添加了 HTTP URL 支持 — 通过 HTTP/HTTPS 获取远程 MCP 配置文件
+- 添加了 `sandbox.excludedCommands` 设置来从沙盒中排除特定 bash 命令
+- 添加了 `OTEL_LOG_TOOL_DETAILS=1` 以在 OpenTelemetry 跨度中包含工具参数和结果
+- 添加了 `CronDelete` 工具来取消计划的 cron 作业
+- 添加了 `mcpServerName` 字段到 MCP 工具调用，在工具使用块中显示服务器名称
+- 改进了 `/remote-control` 会话列表性能，使用虚拟化延迟渲染
+- 改进了 `/model` 选择器来显示 Bedrock 推理配置文件 ARN
+- 改进了代理错误消息来显示具体的工具验证错误而不是通用的"Invalid tool call"
+- 修复了 1M 上下文窗口会话中 `/compact` 挂起
+- 修复了具有许多并行工具调用的会话中 `--resume` 截断历史
+- 修复了使用带有 `baseUrl` 配置的 Bedrock/Vertex SDK 时 `CLAUDE_CODE_USE_MCP_BUS` 环境变量被忽略
+- 修复了使用 `bypassPermissions: true` 时权限对话框仍然出现
+- 修复了 MCP 服务器的 `cacheResources` 和 `cacheTools` 配置选项被忽略
+- 修复了 `--json-schema` 在 Windows 上创建文件失败，原因是无效的文件 URI 处理
+- 修复了 `.mcp.json` 中的相对路径不相对于项目目录解析
+- 修复了 `$HOME` 和 `~` 在 `.mcp.json` 路径中不被展开
+- 修复了语音模式在 macOS 上创建重复的录制文件
+- 修复了配置 MCP 工具时 `--statusline` 脚本被重复调用
+- 修复了 `/stats` 对话框中的令牌计数不匹配状态栏
+- 修复了启用 `voiceEnabled: true` 时按键声音播放两次
+- 修复了 `/clear` 不清除排队的消息
+- 修复了当前分支与基础分支相同时 `/pr` 失败并显示"no commits to create PR"
+- 修复了 git 工作目录有未暂存更改时 `/pr` 创建空 PR
+- 修复了使用 Git Bash 时 `/pr` 在 Windows 上失败
+- 修复了 `/pr` 在 worktree 中不工作
+- 修复了启用 MCP 工具时 `/effort` 选择器显示空列表
+- 修复了 `/model` 选择器在 Claude 响应时不工作
+- 修复了远程控制会话中屏幕共享初始化期间的竞争条件
+- 修复了流式传输期间显示陈旧状态的遥测事件
+- 修复了 `--json` 输出中 `sessionId` 不一致
+- 修复了 `--resume` 在最近删除的会话上失败并显示"Session not found"
+- 修复了 `--worktree` 使用现有的 worktree 而不是创建新的
+- 修复了 `claude auth status` 显示缓存的订阅信息而不是实时获取
+- 修复了 `claude --version` 不显示 git commit SHA
+- 修复了使用 `--output` 时 `claude -p` 退出代码不正确
+- 修复了启动时 `managed-settings.json` 验证错误不显示
+- 修复了 `allowedMcpServers` 设置不匹配部分服务器名称
+- 修复了 hooks 配置中相对路径不相对于项目目录解析
+- 修复了 `Stop` 钩子在工具使用期间触发两次
+- 修复了 `SessionEnd` 钩子接收陈旧的会话数据
+- 修复了 `PreToolUse` 钩子不接收工具输入参数
+- 修复了 `PostToolUse` 钩子在工具失败时不触发
+- 修复了后台代理失败时 `Notification` 钩子不触发
+- 修复了通过 `--mcp-config` 配置时 MCP 服务器按字母顺序而不是配置顺序加载
+- 修复了 MCP 服务器首次连接失败后不重试
+- 修复了 MCP 工具描述在服务器断开连接后保留在内存中
+- 修复了启动时 MCP 服务器连接超时太短（5s → 30s）
+- 修复了 MCP 资源订阅在服务器重连后不恢复
+- 修复了 MCP 提示在会话期间不刷新
+- 修复了使用 `-p` 标志时 MCP 工具不可用
+- 改进了 MCP 服务器连接错误消息以显示具体原因
+- 改进了 MCP 工具调用性能，通过并行化多个服务器的工具发现
+- 改进了 MCP 资源读取以处理大文件
+- 改进了 MCP 提示执行以支持参数验证
+- 改进了 MCP 服务器健康检查间隔（60s → 30s）
+- [VSCode] 修复了 MCP 服务器状态指示器不更新
+- [VSCode] 修复了 MCP 工具列表不刷新
+- [VSCode] 修复了 MCP 资源浏览器不显示嵌套资源
+- [VSCode] 修复了 MCP 提示参数输入不验证
+
 ## 2.1.81
 
 - 为脚本化的 `-p` 调用添加了 `--bare` 标志 — 跳过钩子、LSP、插件同步和技能目录遍历；需要通过 `--settings` 提供 `ANTHROPIC_API_KEY` 或 `apiKeyHelper`（OAuth 和钥匙串认证已禁用）；自动记忆功能完全禁用
